@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        /*Styling of the table below */
+        table {
+            width: 100%; 
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table,
+        th,
+        td {
+            border: 3px solid #000000; /*Assigning pixel border*/
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+        }
+        
+    </style>
+
+    <title>Region Selection</title>
+</head>
+
+<body>
+    <label for="regionSelect">Select a Region:</label>  <!-- Creation of region dropdown menu --> 
+    <select id="regionSelect"></select> <br>
+
+    <label for="searchInput">Search:</label> <!-- Creation of Search Input label-->
+    <input type="text" id="searchInput">
+    <button onclick="search()">Search</button> <!--Creation of button with embedded function to the search method-->
+
+    <label id="total">Total Countries:</label> <br>
+    <label id="largest">Largest Country:</label> <br>    <!--labels for the necessary labels-->
+    <label id="populated">Most Populated Country:</label>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Flag</th>
+                <th>Name</th>
+                <th>Capital</th>        <!--Table to store all the information from the API-->
+                <th>Population</th>     <!--This is the creation of the table and the designated columns-->
+                <th>Area</th>
+                <th>Population Density</th>
+            </tr>
+        </thead>
+        <tbody id="countryTable"></tbody>
+    </table>
+
+    <script>
+        let countries = []; // Declare countries globally
+
+        fetch('https://www.cs.kent.ac.uk/people/staff/yh/api/country-data/countries')   //Fetches the API to get the infromation of the regions and countries.
+            .then(response => response.json())
+            .then(data => {
+                countries = data; // Assign the fetched data to the globally declared countries variable
+
+                // Iterate through the regions and add options to the selection
+                const selRegion = [...new Set(countries.map(country => country.region))];
+                selRegion.forEach(region => {
+                    const option = document.createElement("option");    //Put countries into the selected region
+                    option.value = region;
+                    option.text = region;
+                    regionSelect.appendChild(option);                   
+                });
+
+                // Add event listener for region selection
+                regionSelect.addEventListener("change", () => {
+                    const selectedRegion = regionSelect.value;
+                    const filteredCountries = countries.filter(country => country.region === selectedRegion);
+                    updateTable(filteredCountries);
+                });
+
+                updateTable(countries);
+            })
+            .catch(error => console.error("Error fetching data:", error));
+
+        const tableBody = document.getElementById("countryTable");
+        const totalLabel = document.getElementById("total");     //gets the value of the html element and then stored in the constant variable
+        const largestLabel = document.getElementById("largest");
+        const populatedLabel = document.getElementById("populated");
+        let num = 0;
+        let populationMap = new Map([]);  //creation of both hashmaps for population and area
+        let areaMap = new Map([]);
+
+        function updateTable(countries) {
+            populationMap.clear();   //Clears previous uses of the table so that new values can be added to update the table.
+            areaMap.clear();
+            tableBody.innerHTML = '';
+            num = 0;
+
+            countries.forEach(country => {
+                num++;
+                const row = tableBody.insertRow();
+                row.insertCell(0).textContent = country.code;
+                row.insertCell(1).innerHTML = `<img src="${country.flag}" alt="${country.name}" width="30">`;
+                row.insertCell(2).textContent = country.name;
+                row.insertCell(3).textContent = country.capital;                             //inserts values named into the record or row.
+                row.insertCell(4).textContent = country.population;
+                row.insertCell(5).textContent = country.area;
+                row.insertCell(6).textContent = (Math.round((country.population / country.area) * 10) / 10); //Rounds the population density to 1dp.
+
+                populationMap.set(country.name, country.population); //in both hashmaps the necessary values are inputted, country names, population and area.
+                areaMap.set(country.name, country.area);
+            });
+
+            totalLabel.innerHTML = "Total Countries: " + num;
+
+            
+            let maxPopulation = 0;
+            let populatedCountry = "";
+            //A for loop needed to find the country with the highest population
+            //By finding the max population, then assigning the country to a constant variable populatedcountry
+            populationMap.forEach((population, country) => {
+                if (population > maxPopulation) {
+                    maxPopulation = population;
+                    populatedCountry = country;
+                }
+            });
+            populatedLabel.innerHTML = "Most Populated country: " + populatedCountry;
+
+            // Find the largest country in the region using the same method as the population
+            let maxArea = 0;
+            let largestArea = "";
+            areaMap.forEach((area, country) => {
+                if (area > maxArea) {
+                    maxArea = area;
+                    largestArea = country;
+                }
+            });
+            largestLabel.innerHTML = "Largest country in region: " + largestArea;
+        }
+
+        function search() {
+            const searchInput = document.getElementById("searchInput").value.toLowerCase();
+            const selectedRegion = regionSelect.value;
+            const filteredCountries = countries.filter(country =>  //initiliase filteredCountries to remove unwanted countries
+                (country.region === selectedRegion) &&              //will only include countrys within the select region
+                (country.name.toLowerCase().includes(searchInput) || country.capital.toLowerCase().includes(searchInput))  //filters out countries that dont have the character 
+            );
+            updateTable(filteredCountries); //updates the Table with the new filtered countries
+        }
+    </script>
+
+</body>
+
+</html>
